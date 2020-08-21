@@ -30,6 +30,7 @@ pub struct PackShape<S: Shape> {
 pub struct Settings {
     pub min_radius: f32,
     pub padding: f32,
+    pub inside: bool,
 
     pub palette: &'static [&'static str],
 
@@ -60,7 +61,7 @@ impl<S: Shape> PackShape<S> {
             let (x, y) = shape.center();
             let d = c.sdf(x, y);
 
-            if d < -cfg.padding {
+            if cfg.inside && d < -cfg.padding {
                 shape.set_radius(-d - cfg.padding);
                 shape.color = (shape.color + 1) % cfg.palette.len();
                 return c.pack(shape, cfg);

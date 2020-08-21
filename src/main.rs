@@ -12,8 +12,9 @@ fn main() {
 
     let settings = Settings {
         min_radius: 5.0,
-        palette: &["black", "white"],
         padding: 5.0,
+        inside: true,
+        palette: &["black", "white"],
         target_area: 0.8,
         max_stall_iterations: 1000,
     };
