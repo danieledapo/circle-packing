@@ -6,7 +6,7 @@ use std::{
 use rand::prelude::*;
 
 pub mod shapes;
-pub use shapes::{Bbox, Circle};
+pub use shapes::{Bbox, Circle, Polyline};
 
 pub trait Shape: Clone + Debug {
     fn bbox(&self) -> Bbox;

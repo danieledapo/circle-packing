@@ -127,6 +127,52 @@ fn main() {
         b.expand(app.width.into(), app.height.into());
         b
     };
+    let container = {
+        let points = vec![
+            (0.0, -250.0), //
+            (500.0, 0.0),  //
+            (0.0, 250.0),  //
+            (-500.0, 0.0), //
+        ];
+
+        // let points = vec![
+        //     (500.0, 0.0),    //
+        //     (1000.0, 250.0), //
+        //     (500.0, 500.0),  //
+        //     (0.0, 250.0),    //
+        // ];
+
+        // let mut points = vec![];
+        // for i in 0_u16..=180 {
+        //     let i = f32::from(i);
+        //     points.push((
+        //         30.0 * i,
+        //         800.0 * (8.0 * i / 180.0 * std::f32::consts::PI).sin(),
+        //     ));
+        // }
+        // points.push((30.0 * 180.0 / 2.0, 900.0));
+
+        let mut poly = circle_packing::shapes::Polyline::new(points).unwrap();
+
+        let mut hole = circle_packing::shapes::Polyline::new(vec![
+            (0.0, -150.0), //
+            (400.0, 0.0),  //
+            (0.0, 150.0),  //
+            (-400.0, 0.0), //
+        ])
+        .unwrap();
+        hole.push_hole(
+            circle_packing::shapes::Polyline::new(vec![
+                (0.0, -50.0),  //
+                (300.0, 0.0),  //
+                (0.0, 50.0),   //
+                (-300.0, 0.0), //
+            ])
+            .unwrap(),
+        );
+        poly.push_hole(hole);
+        poly
+    };
     let mut root = PackShape::new(container);
     root.color = 1 % settings.palette.len();
 
