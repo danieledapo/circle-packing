@@ -7,14 +7,46 @@ use rand::prelude::*;
 
 use circle_packing::{Bbox, PackShape, Settings, Shape};
 
+type PALETTE = (&'static str, &'static [&'static str]);
+static PALETTES: &'static [PALETTE] = &[
+    //
+    // duo
+    //
+    ("dt01", &["#172a89", "#f7f7f3"]),
+    ("dt02", &["#302956", "#f3c507"]),
+    ("dt03", &["#000000", "#a7a7a7"]),
+    ("dt04", &["#50978e", "#f7f0df"]),
+    ("dt05", &["#ee5d65", "#f0e5cb"]),
+    ("dt06", &["#271f47", "#e7ceb5"]),
+    ("dt07", &["#6a98a5", "#d24c18"]),
+    ("dt08", &["#5d9d88", "#ebb43b"]),
+    ("dt09", &["#052e57", "#de8d80"]),
+    //
+    // rag
+    //
+    ("rag-mysore", &["#ec6c26", "#613a53", "#e8ac52", "#639aa0"]),
+    ("rag-gol", &["#d3693e", "#803528", "#f1b156", "#90a798"]),
+    ("rag-belur", &["#f46e26", "#68485f", "#3d273a", "#535d55"]),
+    (
+        "rag-bangalore",
+        &["#ea720e", "#ca5130", "#e9c25a", "#52534f"],
+    ),
+    ("rag-taj", &["#ce565e", "#8e1752", "#f8a100", "#3ac1a6"]),
+    (
+        "rag-virupaksha",
+        &["#f5736a", "#925951", "#feba4c", "#9d9b9d"],
+    ),
+];
+
 fn main() {
     let mut rng = thread_rng();
 
+    let (_palette_name, palette) = PALETTES.choose(&mut rng).unwrap();
     let settings = Settings {
         min_radius: 5.0,
         padding: 5.0,
         inside: true,
-        palette: &["black", "white"],
+        palette,
         target_area: 0.8,
         max_stall_iterations: 1000,
     };
