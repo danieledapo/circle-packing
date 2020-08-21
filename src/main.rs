@@ -1,9 +1,11 @@
 use std::{
     fs::File,
     io::{self, BufWriter, Write},
+    path::PathBuf,
 };
 
 use rand::prelude::*;
+use structopt::StructOpt;
 
 use circle_packing::{Bbox, PackShape, Settings, Shape};
 
@@ -38,16 +40,83 @@ static PALETTES: &'static [PALETTE] = &[
     ),
 ];
 
+/// Program to create some SVG images from random circle packing runs.
+#[derive(Debug, StructOpt)]
+pub struct App {
+    /// Show available themes and exit.
+    #[structopt(long)]
+    list_themes: bool,
+
+    /// Padding between the circles.
+    #[structopt(short, long, default_value = "5.0")]
+    padding: f32,
+
+    /// Minimum radius all the packed circles must have.
+    #[structopt(short = "r", long, default_value = "5.0")]
+    min_radius: f32,
+
+    /// Percentage between [0, 1] of the total area that must be packed with
+    /// circles.
+    #[structopt(long, default_value = "0.8")]
+    target_coverage: f32,
+
+    /// Whether circles can contain other non-intersecting circles. This does
+    /// not affect the total area covered by circles.
+    #[structopt(long)]
+    no_inside: bool,
+
+    /// Theme to use when saving the final image.
+    #[structopt(short, long)]
+    theme: Option<String>,
+
+    /// Width of the image.
+    #[structopt(short, long, default_value = "1920")]
+    width: u16,
+
+    /// Height of the image.
+    #[structopt(short, long, default_value = "1080")]
+    height: u16,
+
+    /// Path where to save the image at.
+    #[structopt(short, long, default_value = "packing.svg")]
+    output: PathBuf,
+}
+
 fn main() {
     let mut rng = thread_rng();
 
-    let (_palette_name, palette) = PALETTES.choose(&mut rng).unwrap();
+    let app = App::from_args();
+
+    if app.list_themes {
+        println!("Available themes");
+        println!();
+        for (name, colors) in PALETTES {
+            println!("  {}: {:?}", name, colors);
+        }
+        println!();
+        return;
+    }
+
+    let (theme_name, palette) = app
+        .theme
+        .and_then(|t| {
+            let theme = PALETTES.iter().find(|(n, _)| n == &&t);
+            if theme.is_none() {
+                println!("theme {} not found, using a random one", t);
+            }
+            theme
+        })
+        .or_else(|| PALETTES.choose(&mut rng))
+        .unwrap();
+
+    println!("using theme {}", theme_name);
+
     let settings = Settings {
-        min_radius: 5.0,
-        padding: 5.0,
-        inside: true,
+        min_radius: app.min_radius,
+        padding: app.padding,
+        inside: !app.no_inside,
         palette,
-        target_area: 0.8,
+        target_area: app.target_coverage,
         max_stall_iterations: 1000,
     };
 
@@ -55,7 +124,7 @@ fn main() {
 
     let container = {
         let mut b = Bbox::new(0.0, 0.0);
-        b.expand(1920.0, 1080.0);
+        b.expand(app.width.into(), app.height.into());
         b
     };
     let mut root = PackShape::new(container);
@@ -80,7 +149,7 @@ fn main() {
         }
     }
 
-    let f = File::create("packing.svg").unwrap();
+    let f = File::create(app.output).unwrap();
     let mut bf = BufWriter::new(f);
     dump_svg(&mut bf, &root, &settings).unwrap();
 }
