@@ -1,13 +1,9 @@
-use std::{
-    fs::File,
-    io::{self, BufWriter, Write},
-    path::PathBuf,
-};
+use std::{fs::File, io::BufWriter, path::PathBuf};
 
 use rand::prelude::*;
 use structopt::StructOpt;
 
-use circle_packing::{Bbox, PackShape, Settings, Shape};
+use circle_packing::{self, Bbox, PackShape, Settings};
 
 type PALETTE = (&'static str, &'static [&'static str]);
 static PALETTES: &'static [PALETTE] = &[
@@ -127,106 +123,13 @@ fn main() {
         b.expand(app.width.into(), app.height.into());
         b
     };
-    let container = {
-        let points = vec![
-            (0.0, -250.0), //
-            (500.0, 0.0),  //
-            (0.0, 250.0),  //
-            (-500.0, 0.0), //
-        ];
 
-        // let points = vec![
-        //     (500.0, 0.0),    //
-        //     (1000.0, 250.0), //
-        //     (500.0, 500.0),  //
-        //     (0.0, 250.0),    //
-        // ];
-
-        // let mut points = vec![];
-        // for i in 0_u16..=180 {
-        //     let i = f32::from(i);
-        //     points.push((
-        //         30.0 * i,
-        //         800.0 * (8.0 * i / 180.0 * std::f32::consts::PI).sin(),
-        //     ));
-        // }
-        // points.push((30.0 * 180.0 / 2.0, 900.0));
-
-        let mut poly = circle_packing::shapes::Polyline::new(points).unwrap();
-
-        let mut hole = circle_packing::shapes::Polyline::new(vec![
-            (0.0, -150.0), //
-            (400.0, 0.0),  //
-            (0.0, 150.0),  //
-            (-400.0, 0.0), //
-        ])
-        .unwrap();
-        hole.push_hole(
-            circle_packing::shapes::Polyline::new(vec![
-                (0.0, -50.0),  //
-                (300.0, 0.0),  //
-                (0.0, 50.0),   //
-                (-300.0, 0.0), //
-            ])
-            .unwrap(),
-        );
-        poly.push_hole(hole);
-        poly
-    };
     let mut root = PackShape::new(container);
     root.color = 1 % settings.palette.len();
 
-    let target_area = settings.target_area * root.area();
-
-    let mut stall_i = 0;
-    while root.occupied_area() < target_area {
-        let (x, y) = root.random_point(&mut rng);
-        let radius = -root.sdf(x, y) - settings.padding;
-
-        let stall = !root.pack(PackShape::circle(x, y, radius), &settings);
-
-        if stall {
-            stall_i += 1;
-            if stall_i >= settings.max_stall_iterations {
-                break;
-            }
-        } else {
-            stall_i = 0;
-        }
-    }
+    circle_packing::pack(&mut root, &settings, &mut rng);
 
     let f = File::create(app.output).unwrap();
     let mut bf = BufWriter::new(f);
-    dump_svg(&mut bf, &root, &settings).unwrap();
-}
-
-pub fn dump_svg<S: Shape>(
-    out: &mut impl Write,
-    root: &PackShape<S>,
-    cfg: &Settings,
-) -> io::Result<()> {
-    let bbox = root.bbox();
-
-    writeln!(
-        out,
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="{x} {y} {width} {height}">
-<rect x="{x}" y="{y}" width="{width}" height="{height}" stroke="none" fill="{color}" />"#,
-        x = bbox.x0(),
-        y = bbox.y0(),
-        width = bbox.width(),
-        height = bbox.height(),
-        color = cfg.palette[0],
-    )?;
-
-    root.write_svg(out, cfg.palette[root.color], "none")?;
-
-    let mut stack: Vec<_> = root.children().iter().collect();
-    while let Some(c) = stack.pop() {
-        c.write_svg(out, cfg.palette[c.color], "none")?;
-        stack.extend(c.children());
-    }
-
-    writeln!(out, "</svg>")
+    circle_packing::dump_svg(&mut bf, &[root], &settings).unwrap();
 }

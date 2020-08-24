@@ -1,7 +1,4 @@
-use std::{
-    fs::File,
-    io::{self, BufWriter, Write},
-};
+use std::{fs::File, io::BufWriter};
 
 use rand::prelude::*;
 
@@ -24,24 +21,7 @@ pub fn main() {
     for root in &mut logo_paths {
         root.color = 1 % settings.palette.len();
 
-        let target_area = settings.target_area * root.area();
-
-        let mut stall_i = 0;
-        while root.occupied_area() < target_area {
-            let (x, y) = root.random_point(&mut rng);
-            let radius = -root.sdf(x, y) - settings.padding;
-
-            let stall = !root.pack(PackShape::circle(x, y, radius), &settings);
-
-            if stall {
-                stall_i += 1;
-                if stall_i >= settings.max_stall_iterations {
-                    break;
-                }
-            } else {
-                stall_i = 0;
-            }
-        }
+        circle_packing::pack(root, &settings, &mut rng);
     }
 
     let f = File::create("packed_logo.svg").unwrap();
@@ -72,8 +52,6 @@ fn load_logo() -> Vec<PackShape<Polyline>> {
             for hole in paths {
                 boundary.push_hole(Polyline::new(hole).unwrap());
             }
-
-            dbg!(&boundary);
 
             PackShape::new(boundary)
         })
@@ -127,44 +105,4 @@ fn read_d(d: &str) -> Vec<Vec<(f32, f32)>> {
     }
 
     paths
-}
-
-pub fn dump_svg<S: Shape>(
-    out: &mut impl Write,
-    roots: &[PackShape<S>],
-    cfg: &Settings,
-) -> io::Result<()> {
-    let mut bbox = roots[0].bbox();
-    for s in &roots[1..] {
-        let b = s.bbox();
-        bbox.expand(b.x0(), b.y0());
-        bbox.expand(b.x0() + b.width(), b.y0() + b.height());
-    }
-
-    writeln!(
-        out,
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="{x} {y} {width} {height}">
-<rect x="{x}" y="{y}" width="{width}" height="{height}" stroke="none" fill="{color}" />"#,
-        x = bbox.x0(),
-        y = bbox.y0(),
-        width = bbox.width(),
-        height = bbox.height(),
-        color = cfg.palette[0],
-    )?;
-
-    let mut stack = vec![];
-
-    for root in roots {
-        root.write_svg(out, cfg.palette[root.color], "none")?;
-        stack.extend(root.children());
-    }
-
-    while let Some(c) = stack.pop() {
-        c.write_svg(out, cfg.palette[c.color], "none")?;
-        stack.extend(c.children());
-    }
-
-    writeln!(out, "</svg>")
 }
