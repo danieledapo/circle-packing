@@ -87,8 +87,8 @@ impl Shape for Bbox {
     }
 
     fn random_point<R: Rng>(&self, rng: &mut R) -> (f32, f32) {
-        let x = rng.gen_range(self.x0, self.x1);
-        let y = rng.gen_range(self.y0, self.y1);
+        let x = rng.gen_range(self.x0..self.x1);
+        let y = rng.gen_range(self.y0..self.y1);
         (x, y)
     }
 
@@ -133,8 +133,8 @@ impl Shape for Circle {
     }
 
     fn random_point<R: Rng>(&self, rng: &mut R) -> (f32, f32) {
-        let a = rng.gen_range(0.0, 2.0 * PI);
-        let d = rng.gen_range(0.0, self.radius);
+        let a = rng.gen_range(0.0..2.0 * PI);
+        let d = rng.gen_range(0.0..self.radius);
 
         let x = a.cos() * d;
         let y = a.sin() * d;
